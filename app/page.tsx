@@ -435,83 +435,89 @@ export default function AdminDashboard() {
 
   return (
       <div className="min-h-screen bg-background">
-        {/* Header */}
         <header
-            className={`${emergencyMode ? "bg-red-600" : "bg-primary"} text-primary-foreground p-4 shadow-sm transition-colors`}
+            className={`${emergencyMode ? "bg-red-600" : "bg-primary"} text-primary-foreground shadow-lg transition-colors`}
         >
-          <div className="flex items-center justify-between max-w-7xl mx-auto">
-            <div className="flex items-center gap-3">
-              <Shield className="h-8 w-8" />
-              <div>
-                <h1 className="text-xl font-bold">Система Контроля Доступа</h1>
-                <p className="text-sm opacity-90">
-                  {emergencyMode ? "🚨 РЕЖИМ ТРЕВОГИ АКТИВЕН - ВСЕ ДОСТУПЫ ЗАБЛОКИРОВАНЫ" : "Панель администратора"}
-                </p>
+          <div className="px-4 py-6 max-w-7xl mx-auto">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-white/10 rounded-xl">
+                  <Shield className="h-8 w-8" />
+                </div>
+                <div>
+                  <h1 className="text-xl sm:text-2xl font-bold">Система Контроля Доступа</h1>
+                  <p className="text-sm opacity-90 mt-1">
+                    {emergencyMode ? "🚨 РЕЖИМ ТРЕВОГИ АКТИВЕН" : "Панель администратора"}
+                  </p>
+                </div>
               </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <Dialog open={isMassResetOpen} onOpenChange={setIsMassResetOpen}>
-                <DialogTrigger asChild>
-                  <Button variant="destructive" className="flex items-center gap-2">
-                    <RotateCcw className="h-4 w-4" />
-                    Сбросить все ключи
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>⚠️ Экстренный сброс всех ключей</DialogTitle>
-                    <DialogDescription>
-                      Это действие сгенерирует новые TOTP-ключи для всех пользователей. Используйте только при подозрении
-                      на компрометацию системы.
-                    </DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <Alert className="border-red-200 bg-red-50">
-                      <AlertTriangle className="h-4 w-4 text-red-600" />
-                      <AlertDescription className="text-red-800">
-                        <strong>Внимание!</strong> После сброса всем пользователям потребуется заново настроить приложения
-                        аутентификации.
-                      </AlertDescription>
-                    </Alert>
-                    <div className="text-sm space-y-2">
-                      <p>
-                        <strong>Когда использовать:</strong>
-                      </p>
-                      <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                        <li>Подозрение на утечку секретных ключей</li>
-                        <li>Компрометация устройства администратора</li>
-                        <li>Обнаружение несанкционированного доступа</li>
-                        <li>Плановая ротация ключей безопасности</li>
-                      </ul>
+              <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <Dialog open={isMassResetOpen} onOpenChange={setIsMassResetOpen}>
+                  <DialogTrigger asChild>
+                    <Button variant="destructive" size="sm" className="flex items-center gap-2 text-xs">
+                      <RotateCcw className="h-3 w-3" />
+                      <span className="hidden sm:inline">Сбросить все ключи</span>
+                      <span className="sm:hidden">Сброс</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>⚠️ Экстренный сброс всех ключей</DialogTitle>
+                      <DialogDescription>
+                        Это действие сгенерирует новые TOTP-ключи для всех пользователей. Используйте только при
+                        подозрении на компрометацию системы.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <Alert className="border-red-200 bg-red-50">
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                        <AlertDescription className="text-red-800">
+                          <strong>Внимание!</strong> После сброса всем пользователям потребуется заново настроить
+                          приложения аутентификации.
+                        </AlertDescription>
+                      </Alert>
+                      <div className="text-sm space-y-2">
+                        <p>
+                          <strong>Когда использовать:</strong>
+                        </p>
+                        <ul className="list-disc list-inside space-y-1 text-muted-foreground">
+                          <li>Подозрение на утечку секретных ключей</li>
+                          <li>Компрометация устройства администратора</li>
+                          <li>Обнаружение несанкционированного доступа</li>
+                          <li>Плановая ротация ключей безопасности</li>
+                        </ul>
+                      </div>
                     </div>
-                  </div>
-                  <DialogFooter>
-                    <Button variant="outline" onClick={() => setIsMassResetOpen(false)}>
-                      Отмена
-                    </Button>
-                    <Button variant="destructive" onClick={resetAllKeys}>
-                      Сбросить все ключи ({users.length} шт.)
-                    </Button>
-                  </DialogFooter>
-                </DialogContent>
-              </Dialog>
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setIsMassResetOpen(false)}>
+                        Отмена
+                      </Button>
+                      <Button variant="destructive" onClick={resetAllKeys}>
+                        Сбросить все ключи ({users.length} шт.)
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
 
-              <Button
-                  variant={emergencyMode ? "destructive" : "secondary"}
-                  onClick={() => setEmergencyMode(!emergencyMode)}
-                  className="flex items-center gap-2"
-              >
-                <AlertTriangle className="h-4 w-4" />
-                {emergencyMode ? "Отключить тревогу" : "Режим тревоги"}
-              </Button>
-              <Badge variant="secondary" className="bg-secondary text-secondary-foreground">
-                Админ
-              </Badge>
+                <Button
+                    variant={emergencyMode ? "destructive" : "secondary"}
+                    size="sm"
+                    onClick={() => setEmergencyMode(!emergencyMode)}
+                    className="flex items-center gap-2 text-xs"
+                >
+                  <AlertTriangle className="h-3 w-3" />
+                  <span className="hidden sm:inline">{emergencyMode ? "Отключить тревогу" : "Режим тревоги"}</span>
+                  <span className="sm:hidden">{emergencyMode ? "Откл" : "Тревога"}</span>
+                </Button>
+                <Badge variant="secondary" className="bg-secondary text-secondary-foreground text-xs">
+                  Админ
+                </Badge>
+              </div>
             </div>
           </div>
         </header>
 
-        <div className="max-w-7xl mx-auto p-4 space-y-6">
+        <div className="px-4 py-6 max-w-7xl mx-auto space-y-6">
           {/* Emergency Alert */}
           {emergencyMode && (
               <Alert className="border-red-200 bg-red-50">
@@ -526,12 +532,13 @@ export default function AdminDashboard() {
               </Alert>
           )}
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Card>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            <Card className="shadow-sm hover:shadow-md transition-shadow border-0 bg-gradient-to-br from-card to-card/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Активные ключи</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
+                <CardTitle className="text-sm font-medium">Активные</CardTitle>
+                <div className="p-2 bg-green-100 rounded-lg">
+                  <Users className="h-4 w-4 text-green-600" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-green-600">{activeUsers}</div>
@@ -539,32 +546,38 @@ export default function AdminDashboard() {
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="shadow-sm hover:shadow-md transition-shadow border-0 bg-gradient-to-br from-card to-card/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Истекающие</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
+                <div className="p-2 bg-amber-100 rounded-lg">
+                  <Clock className="h-4 w-4 text-amber-600" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-amber-600">{expiringUsers}</div>
-                <p className="text-xs text-muted-foreground">в ближайшие дни</p>
+                <p className="text-xs text-muted-foreground">скоро</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="shadow-sm hover:shadow-md transition-shadow border-0 bg-gradient-to-br from-card to-card/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Истёкшие</CardTitle>
-                <AlertTriangle className="h-4 w-4 text-muted-foreground" />
+                <div className="p-2 bg-red-100 rounded-lg">
+                  <AlertTriangle className="h-4 w-4 text-red-600" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-red-600">{expiredUsers}</div>
-                <p className="text-xs text-muted-foreground">требуют обновления</p>
+                <p className="text-xs text-muted-foreground">обновить</p>
               </CardContent>
             </Card>
 
-            <Card>
+            <Card className="shadow-sm hover:shadow-md transition-shadow border-0 bg-gradient-to-br from-card to-card/50">
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                 <CardTitle className="text-sm font-medium">Уведомления</CardTitle>
-                <Bell className="h-4 w-4 text-muted-foreground" />
+                <div className="p-2 bg-blue-100 rounded-lg">
+                  <Bell className="h-4 w-4 text-blue-600" />
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="text-2xl font-bold text-blue-600">{notifications.length}</div>
@@ -573,42 +586,51 @@ export default function AdminDashboard() {
             </Card>
           </div>
 
-          {/* Main Content */}
-          <Tabs defaultValue="users" className="space-y-4">
-            <TabsList className="grid w-full grid-cols-4 h-auto p-1">
-              <TabsTrigger value="users" className="flex flex-col items-center gap-1 py-2 px-1 text-xs">
-                <Users className="h-4 w-4" />
-                <span className="hidden sm:inline">Пользователи</span>
-                <span className="sm:hidden">Польз.</span>
-              </TabsTrigger>
-              <TabsTrigger value="keys" className="flex flex-col items-center gap-1 py-2 px-1 text-xs">
-                <Key className="h-4 w-4" />
-                <span className="hidden sm:inline">Ключи</span>
-                <span className="sm:hidden">Ключи</span>
-              </TabsTrigger>
-              <TabsTrigger value="logs" className="flex flex-col items-center gap-1 py-2 px-1 text-xs">
-                <History className="h-4 w-4" />
-                <span className="hidden sm:inline">Логи</span>
-                <span className="sm:hidden">Логи</span>
-              </TabsTrigger>
-              <TabsTrigger value="notifications" className="flex flex-col items-center gap-1 py-2 px-1 text-xs">
-                <Bell className="h-4 w-4" />
-                <span className="hidden sm:inline">Уведомления</span>
-                <span className="sm:hidden">Увед.</span>
-              </TabsTrigger>
-            </TabsList>
+          <Tabs defaultValue="users" className="space-y-6">
+            <div className="sticky top-0 bg-background/95 backdrop-blur-sm z-10 pb-4">
+              <TabsList className="grid w-full grid-cols-4 h-auto p-1 bg-card shadow-sm">
+                <TabsTrigger
+                    value="users"
+                    className="flex flex-col items-center gap-2 py-3 px-2 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg transition-all"
+                >
+                  <Users className="h-5 w-5" />
+                  <span className="font-medium">Пользователи</span>
+                </TabsTrigger>
+                <TabsTrigger
+                    value="keys"
+                    className="flex flex-col items-center gap-2 py-3 px-2 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg transition-all"
+                >
+                  <Key className="h-5 w-5" />
+                  <span className="font-medium">Ключи</span>
+                </TabsTrigger>
+                <TabsTrigger
+                    value="logs"
+                    className="flex flex-col items-center gap-2 py-3 px-2 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg transition-all"
+                >
+                  <History className="h-5 w-5" />
+                  <span className="font-medium">Логи</span>
+                </TabsTrigger>
+                <TabsTrigger
+                    value="notifications"
+                    className="flex flex-col items-center gap-2 py-3 px-2 text-xs data-[state=active]:bg-primary data-[state=active]:text-primary-foreground rounded-lg transition-all"
+                >
+                  <Bell className="h-5 w-5" />
+                  <span className="font-medium">Уведомления</span>
+                </TabsTrigger>
+              </TabsList>
+            </div>
 
             <TabsContent value="users" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <div className="flex items-center justify-between">
+              <Card className="shadow-sm border-0 bg-gradient-to-br from-card to-card/50">
+                <CardHeader className="pb-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                      <CardTitle>Управление пользователями</CardTitle>
-                      <CardDescription>Добавляйте, удаляйте и управляйте доступом пользователей</CardDescription>
+                      <CardTitle className="text-lg">Управление пользователями</CardTitle>
+                      <CardDescription className="mt-1">Добавляйте и управляйте доступом пользователей</CardDescription>
                     </div>
-                    <div className="flex items-center gap-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
                       <Select value={userFilter} onValueChange={(value: any) => setUserFilter(value)}>
-                        <SelectTrigger className="w-40">
+                        <SelectTrigger className="w-full sm:w-40">
                           <Filter className="h-4 w-4 mr-2" />
                           <SelectValue />
                         </SelectTrigger>
@@ -621,9 +643,10 @@ export default function AdminDashboard() {
                       </Select>
                       <Dialog open={isAddUserOpen} onOpenChange={setIsAddUserOpen}>
                         <DialogTrigger asChild>
-                          <Button className="flex items-center gap-2">
+                          <Button className="flex items-center gap-2 w-full sm:w-auto">
                             <UserPlus className="h-4 w-4" />
-                            Добавить пользователя
+                            <span className="sm:hidden">Добавить</span>
+                            <span className="hidden sm:inline">Добавить пользователя</span>
                           </Button>
                         </DialogTrigger>
                         <DialogContent>
@@ -684,93 +707,111 @@ export default function AdminDashboard() {
                     </div>
                   </div>
                 </CardHeader>
-                <CardContent>
+                <CardContent className="pt-0">
                   <div className="space-y-3">
                     {filteredUsers.map((user) => (
-                        <div key={user.id} className="flex items-center justify-between p-4 border rounded-lg">
-                          <div className="flex items-center gap-4">
-                            <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                              <Users className="h-6 w-6 text-primary" />
-                            </div>
-                            <div>
-                              <div className="flex items-center gap-2 mb-1">
-                                <p className="font-medium">{user.name}</p>
-                                {getAccessLevelBadge(user.accessLevel)}
+                        <Card
+                            key={user.id}
+                            className="p-4 shadow-sm border-0 bg-background/50 hover:bg-background/80 transition-colors"
+                        >
+                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                            <div className="flex items-start gap-4 flex-1">
+                              <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                                <Users className="h-6 w-6 text-primary" />
                               </div>
-                              <p className="text-sm text-muted-foreground">
-                                Истекает: {user.keyExpiry.toLocaleDateString("ru-RU")}
-                              </p>
-                              <div className="flex items-center gap-2 mt-2">
-                                <span className="text-xs text-muted-foreground">Секрет:</span>
-                                <code className="text-xs bg-muted px-2 py-1 rounded">
-                                  {visibleSecrets.has(user.id) ? user.totpSecret : "••••••••••••••••"}
-                                </code>
-                                <Button variant="ghost" size="sm" onClick={() => toggleSecretVisibility(user.id)}>
-                                  {visibleSecrets.has(user.id) ? (
-                                      <EyeOff className="h-3 w-3" />
-                                  ) : (
-                                      <Eye className="h-3 w-3" />
-                                  )}
-                                </Button>
-                                <Button variant="ghost" size="sm" onClick={() => copyToClipboard(user.totpSecret)}>
-                                  <Copy className="h-3 w-3" />
-                                </Button>
-                              </div>
-                              <div className="flex items-center gap-2 mt-1">
-                                <span className="text-xs text-muted-foreground">Текущий код:</span>
-                                <code className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded font-mono">
-                                  {currentCodes[user.id] || "------"}
-                                </code>
-                                <span className="text-xs text-muted-foreground">(обновляется каждые 30 сек)</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            {getStatusBadge(user.status)}
-                            <Button variant="outline" size="sm" onClick={() => resetUserKey(user.id)} title="Сбросить ключ">
-                              <RotateCcw className="h-4 w-4" />
-                            </Button>
-                            <Dialog>
-                              <DialogTrigger asChild>
-                                <Button variant="outline" size="sm" title="Показать QR-код">
-                                  <QrCode className="h-4 w-4" />
-                                </Button>
-                              </DialogTrigger>
-                              <DialogContent>
-                                <DialogHeader>
-                                  <DialogTitle>QR-код для {user.name}</DialogTitle>
-                                  <DialogDescription>Отсканируйте этот код в приложении аутентификатора</DialogDescription>
-                                </DialogHeader>
-                                <div className="flex justify-center p-4">
-                                  <div className="text-center space-y-4">
-                                    <img
-                                        src={user.qrCode || "/placeholder.svg"}
-                                        alt={`QR Code for ${user.name}`}
-                                        className="w-48 h-48 border rounded mx-auto"
-                                    />
-                                    <div className="text-sm text-muted-foreground space-y-1">
-                                      <p>Секретный ключ:</p>
-                                      <code className="bg-muted px-2 py-1 rounded text-xs break-all">
-                                        {user.totpSecret}
-                                      </code>
-                                      <p className="text-xs mt-2">
-                                        Используйте Google Authenticator, Authy или другое TOTP-приложение
-                                      </p>
+                              <div className="flex-1 min-w-0">
+                                <div className="flex flex-wrap items-center gap-2 mb-2">
+                                  <p className="font-semibold text-base">{user.name}</p>
+                                  {getAccessLevelBadge(user.accessLevel)}
+                                </div>
+                                <p className="text-sm text-muted-foreground mb-3">
+                                  Истекает: {user.keyExpiry.toLocaleDateString("ru-RU")}
+                                </p>
+
+                                <div className="space-y-2">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-muted-foreground">Секрет:</span>
+                                    <code className="text-xs bg-muted px-2 py-1 rounded font-mono break-all">
+                                      {visibleSecrets.has(user.id) ? user.totpSecret : "••••••••••••••••"}
+                                    </code>
+                                    <div className="flex gap-1">
+                                      <Button variant="ghost" size="sm" onClick={() => toggleSecretVisibility(user.id)}>
+                                        {visibleSecrets.has(user.id) ? (
+                                            <EyeOff className="h-3 w-3" />
+                                        ) : (
+                                            <Eye className="h-3 w-3" />
+                                        )}
+                                      </Button>
+                                      <Button variant="ghost" size="sm" onClick={() => copyToClipboard(user.totpSecret)}>
+                                        <Copy className="h-3 w-3" />
+                                      </Button>
                                     </div>
                                   </div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <span className="text-xs text-muted-foreground">Текущий код:</span>
+                                    <code className="text-sm bg-green-100 text-green-800 px-3 py-1 rounded-lg font-mono font-bold">
+                                      {currentCodes[user.id] || "------"}
+                                    </code>
+                                    <span className="text-xs text-muted-foreground">(обновляется каждые 30 сек)</span>
+                                  </div>
                                 </div>
-                              </DialogContent>
-                            </Dialog>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => removeUser(user.id)}
-                                className="text-destructive hover:text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
+                              {getStatusBadge(user.status)}
+                              <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => resetUserKey(user.id)}
+                                  title="Сбросить ключ"
+                              >
+                                <RotateCcw className="h-4 w-4" />
+                              </Button>
+                              <Dialog>
+                                <DialogTrigger asChild>
+                                  <Button variant="outline" size="sm" title="Показать QR-код">
+                                    <QrCode className="h-4 w-4" />
+                                  </Button>
+                                </DialogTrigger>
+                                <DialogContent>
+                                  <DialogHeader>
+                                    <DialogTitle>QR-код для {user.name}</DialogTitle>
+                                    <DialogDescription>
+                                      Отсканируйте этот код в приложении аутентификатора
+                                    </DialogDescription>
+                                  </DialogHeader>
+                                  <div className="flex justify-center p-4">
+                                    <div className="text-center space-y-4">
+                                      <img
+                                          src={user.qrCode || "/placeholder.svg"}
+                                          alt={`QR Code for ${user.name}`}
+                                          className="w-48 h-48 border rounded mx-auto"
+                                      />
+                                      <div className="text-sm text-muted-foreground space-y-1">
+                                        <p>Секретный ключ:</p>
+                                        <code className="bg-muted px-2 py-1 rounded text-xs break-all">
+                                          {user.totpSecret}
+                                        </code>
+                                        <p className="text-xs mt-2">
+                                          Используйте Google Authenticator, Authy или другое TOTP-приложение
+                                        </p>
+                                      </div>
+                                    </div>
+                                  </div>
+                                </DialogContent>
+                              </Dialog>
+                              <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() => removeUser(user.id)}
+                                  className="text-destructive hover:text-destructive"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
                           </div>
-                        </div>
+                        </Card>
                     ))}
                   </div>
                 </CardContent>

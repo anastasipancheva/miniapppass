@@ -41,7 +41,7 @@ class NotificationService:
 💡 Урок был отменен. Свяжитесь с репетитором для переноса."""
 
             reply_markup = InlineKeyboardMarkup(inline_keyboard=[[
-                InlineKeyboardButton(text="💬 Написать репетитору", callback_data="write_to_tutor")
+                InlineKeyboardButton(text="��� Написать репетитору", callback_data="write_to_tutor")
             ]])
 
             return await send_notification_to_user(self.bot, student_id, message, reply_markup)
@@ -245,7 +245,7 @@ class NotificationService:
 
 👨‍🏫 <b>Репетитор:</b> {tutor_name}
 👥 <b>Группа:</b> {group_name}
-📅 <b>Первое за��ятие:</b> {lesson_datetime}
+📅 <b>Первое занятие:</b> {lesson_datetime}
 
 🎉 Поздравляем! Вы стали участником новой группы.
 Все групповые уроки будут отображаться в вашем расписании."""
