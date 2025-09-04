@@ -155,7 +155,7 @@ export default function AccessControlAdmin() {
   ])
 
   const [newUserName, setNewUserName] = useState("")
-  const [newUserDuration, setNewUserDuration] = useState("7")
+  const [newUserDuration, setNewUserDuration] = useState("7") // (пока не используется)
   const [newUserAccessLevel, setNewUserAccessLevel] = useState<string>("")
   const [isAddUserOpen, setShowAddUserDialog] = useState(false)
   const [isMassResetOpen, setShowMassResetDialog] = useState(false)
@@ -163,9 +163,6 @@ export default function AccessControlAdmin() {
   const [logFilter, setLogFilter] = useState<"all" | "success" | "failed">("all")
   const [emergencyMode, setAlarmMode] = useState(false)
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set())
-  const [testCode, setTestCode] = useState("")
-  const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
-  const [testUserId, setTestUserId] = useState<string>("")
 
   const [newUserQrCode, setNewUserQrCode] = useState<string>("")
   const [showNewUserQr, setShowNewUserQr] = useState(false)
@@ -234,39 +231,6 @@ export default function AccessControlAdmin() {
       default:
         return <Bell className="h-4 w-4" />
     }
-  }
-
-  const testAccess = () => {
-    if (!testUserId || !testCode) {
-      alert("Выберите пользователя и введите код")
-      return
-    }
-
-    const user = users.find((u) => u.id === testUserId)
-    if (!user) {
-      alert("Пользователь не найден")
-      return
-    }
-
-    // const isValidCode = generateTOTPCode(user.totpSecret) === testCode
-    const isValidCode = true // TODO: Implement real TOTP validation
-
-    setTestResult({
-      success: isValidCode,
-      message: isValidCode ? "Доступ разрешен" : "Доступ запрещен",
-    })
-
-    setAccessLogs([
-      {
-        id: Date.now().toString(),
-        userId: user.id,
-        userName: user.name,
-        timestamp: new Date(),
-        success: isValidCode,
-        code: testCode,
-      },
-      ...accessLogs,
-    ])
   }
 
   const resetUserKey = async (userId: string) => {
@@ -700,64 +664,6 @@ export default function AccessControlAdmin() {
                 </Card>
             ))}
           </div>
-
-          {/* Test Access Section */}
-          <Card className="bg-white/80 backdrop-blur border-orange-200">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Shield className="h-5 w-5 text-orange-600" />
-                Тест доступа
-              </CardTitle>
-              <CardDescription>Проверка TOTP кодов пользователей</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {emergencyMode && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                    <div className="flex items-center gap-2 text-red-700">
-                      <AlertTriangle className="h-4 w-4" />
-                      <span className="font-medium">Режим тревоги активен - тест доступа заблокирован</span>
-                    </div>
-                  </div>
-              )}
-
-              {!emergencyMode && (
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <div>
-                      <Label htmlFor="test-user">Пользователь</Label>
-                      <Select value={testUserId} onValueChange={setTestUserId}>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Выберите пользователя" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {users
-                              .filter((u) => u.isActive)
-                              .map((user) => (
-                                  <SelectItem key={user.id} value={user.id}>
-                                    {user.name}
-                                  </SelectItem>
-                              ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div>
-                      <Label htmlFor="test-code">6-значный код</Label>
-                      <Input
-                          id="test-code"
-                          value={testCode}
-                          onChange={(e) => setTestCode(e.target.value)}
-                          placeholder="123456"
-                          maxLength={6}
-                      />
-                    </div>
-                    <div className="md:col-span-2">
-                      <Button onClick={testAccess} className="w-full bg-orange-600 hover:bg-orange-700">
-                        Проверить доступ
-                      </Button>
-                    </div>
-                  </div>
-              )}
-            </CardContent>
-          </Card>
 
           {/* Logs Section */}
           <Card className="shadow-sm border-0 bg-gradient-to-br from-card to-card/50">
