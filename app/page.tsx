@@ -28,7 +28,6 @@ import {
   Trash2,
   AlertTriangle,
   CheckCircle,
-  QrCode,
   RotateCcw,
   Filter,
   History,
@@ -45,6 +44,7 @@ interface User {
   daysLeft: number
   accessLevel: "permanent" | "guest" | "business_trip"
   totpSecret: string
+  qrShown: boolean // Added flag to track if QR was shown
   qrCode: string
 }
 
@@ -73,8 +73,8 @@ export default function AdminDashboard() {
       daysLeft: 2,
       accessLevel: "permanent",
       totpSecret: "JBSWY3DPEHPK3PXP",
-      qrCode:
-          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IndoaXRlIi8+PHRleHQ+UVIgQ29kZTwvdGV4dD48L3N2Zz4=",
+      qrShown: true, // Existing users already have QR shown
+      qrCode: "",
     },
     {
       id: "2",
@@ -84,8 +84,8 @@ export default function AdminDashboard() {
       daysLeft: 10,
       accessLevel: "guest",
       totpSecret: "HXDMVJECJJWSRB3HWIZR4IFUGFTMXBOZ",
-      qrCode:
-          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IndoaXRlIi8+PHRleHQ+UVIgQ29kZTwvdGV4dD48L3N2Zz4=",
+      qrShown: true, // Existing users already have QR shown
+      qrCode: "",
     },
     {
       id: "3",
@@ -95,8 +95,8 @@ export default function AdminDashboard() {
       daysLeft: -1,
       accessLevel: "business_trip",
       totpSecret: "MFRGG2LTEBUW4IDPMYFA",
-      qrCode:
-          "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCI+PHJlY3Qgd2lkdGg9IjIwMCIgaGVpZ2h0PSIyMDAiIGZpbGw9IndoaXRlIi8+PHRleHQ+UVIgQ29kZTwvdGV4dD48L3N2Zz4=",
+      qrShown: true, // Existing users already have QR shown
+      qrCode: "",
     },
   ])
 
@@ -122,13 +122,6 @@ export default function AdminDashboard() {
       success: false,
       code: "456789",
     },
-    {
-      id: "4",
-      userName: "Неизвестный",
-      timestamp: new Date(Date.now() - 90 * 60 * 1000),
-      success: false,
-      code: "000000",
-    },
   ])
 
   const [notifications, setNotifications] = useState<Notification[]>([
@@ -150,6 +143,10 @@ export default function AdminDashboard() {
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
   const [currentCodes, setCurrentCodes] = useState<Record<string, string>>({})
 
+  const [newUserQrCode, setNewUserQrCode] = useState<string>("") // Added state for new user QR code
+  const [showNewUserQr, setShowNewUserQr] = useState(false) // Added state to control QR display
+  const [newUserCreated, setNewUserCreated] = useState<User | null>(null) // Added state for newly created user
+
   const activeUsers = users.filter((u) => u.status === "active").length
   const expiringUsers = users.filter((u) => u.status === "expiring").length
   const expiredUsers = users.filter((u) => u.status === "expired").length
@@ -158,6 +155,8 @@ export default function AdminDashboard() {
     if (!newUserName.trim()) return
 
     const totpSecret = generateTOTPSecret()
+    const qrCode = generateQRCode(newUserName, totpSecret)
+
     const newUser: User = {
       id: Date.now().toString(),
       name: newUserName,
@@ -166,7 +165,8 @@ export default function AdminDashboard() {
       daysLeft: Number.parseInt(newUserDuration),
       accessLevel: newUserAccessLevel,
       totpSecret,
-      qrCode: generateQRCode(newUserName, totpSecret),
+      qrShown: false, // New users start with QR not shown
+      qrCode,
     }
 
     setUsers([...users, newUser])
@@ -179,10 +179,24 @@ export default function AdminDashboard() {
       },
       ...notifications,
     ])
+
+    setNewUserCreated(newUser)
+    setNewUserQrCode(qrCode)
+    setShowNewUserQr(true)
+
     setNewUserName("")
     setNewUserDuration("7")
     setNewUserAccessLevel("guest")
     setIsAddUserOpen(false)
+  }
+
+  const handleQrConfirmed = () => {
+    if (newUserCreated) {
+      setUsers(users.map((user) => (user.id === newUserCreated.id ? { ...user, qrShown: true } : user)))
+    }
+    setShowNewUserQr(false)
+    setNewUserQrCode("")
+    setNewUserCreated(null)
   }
 
   const removeUser = (userId: string) => {
@@ -238,18 +252,13 @@ export default function AdminDashboard() {
 
   const generateQRCode = (name: string, secret: string) => {
     const issuer = "Access Control System"
-    const otpAuthUrl = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(name)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}`
-
-    // Create QR code SVG with proper TOTP data
     const qrSize = 200
     const cellSize = 4
     const gridSize = qrSize / cellSize
 
-    // Simple QR-like pattern generator (in production, use proper QR library like qrcode.js)
     let qrPattern = ""
     for (let y = 0; y < gridSize; y++) {
       for (let x = 0; x < gridSize; x++) {
-        // Create pseudo-random pattern based on secret and position
         const hash = (secret.charCodeAt((x + y) % secret.length) + x * 7 + y * 11) % 256
         if (hash > 128) {
           qrPattern += `<rect x="${x * cellSize}" y="${y * cellSize}" width="${cellSize}" height="${cellSize}" fill="black"/>`
@@ -261,15 +270,12 @@ export default function AdminDashboard() {
       <svg width="${qrSize}" height="${qrSize}" xmlns="http://www.w3.org/2000/svg">
         <rect width="${qrSize}" height="${qrSize}" fill="white"/>
         ${qrPattern}
-        <!-- Corner markers -->
         <rect x="0" y="0" width="28" height="28" fill="black"/>
         <rect x="4" y="4" width="20" height="20" fill="white"/>
         <rect x="8" y="8" width="12" height="12" fill="black"/>
-        
         <rect x="${qrSize - 28}" y="0" width="28" height="28" fill="black"/>
         <rect x="${qrSize - 24}" y="4" width="20" height="20" fill="white"/>
         <rect x="${qrSize - 20}" y="8" width="12" height="12" fill="black"/>
-        
         <rect x="0" y="${qrSize - 28}" width="28" height="28" fill="black"/>
         <rect x="4" y="${qrSize - 24}" width="20" height="20" fill="white"/>
         <rect x="8" y="${qrSize - 20}" width="12" height="12" fill="black"/>
@@ -307,22 +313,36 @@ export default function AdminDashboard() {
 
   const resetUserKey = (userId: string) => {
     const newSecret = generateTOTPSecret()
+    const qrCode = generateQRCode(users.find((u) => u.id === userId)?.name || "", newSecret)
+
     setUsers(
         users.map((user) =>
-            user.id === userId ? { ...user, totpSecret: newSecret, qrCode: generateQRCode(user.name, newSecret) } : user,
+            user.id === userId
+                ? {
+                  ...user,
+                  totpSecret: newSecret,
+                  qrShown: false, // Reset QR shown flag when key is reset
+                  qrCode,
+                }
+                : user,
         ),
     )
+
     const user = users.find((u) => u.id === userId)
     if (user) {
       setNotifications([
         {
           id: Date.now().toString(),
-          type: "info",
-          message: `Ключ пользователя ${user.name} был сброшен`,
+          type: "warning",
+          message: `🔄 Ключ пользователя ${user.name} был сброшен. Требуется новая настройка аутентификатора!`,
           timestamp: new Date(),
         },
         ...notifications,
       ])
+
+      setNewUserCreated({ ...user, totpSecret: newSecret, qrShown: false, qrCode })
+      setNewUserQrCode(qrCode)
+      setShowNewUserQr(true)
     }
   }
 
@@ -332,6 +352,7 @@ export default function AdminDashboard() {
       return {
         ...user,
         totpSecret: newSecret,
+        qrShown: false, // Reset QR shown flag for all users
         qrCode: generateQRCode(user.name, newSecret),
       }
     })
@@ -341,7 +362,7 @@ export default function AdminDashboard() {
       {
         id: Date.now().toString(),
         type: "warning",
-        message: `🔄 Эстренное обновление: все ключи (${users.length} шт.) были сброшены из соображений безопасности`,
+        message: `🔄 Эстренное обновление: все ключи (${users.length} шт.) были сброшены из соображений безопасности. Всем пользователям требуется новая настройка!`,
         timestamp: new Date(),
       },
       ...notifications,
@@ -364,8 +385,6 @@ export default function AdminDashboard() {
   }
 
   const generateTOTPCode = (secret: string, timestamp?: number) => {
-    // Simple TOTP implementation for demo
-    // In production, use proper TOTP library like otplib
     const time = Math.floor((timestamp || Date.now()) / 1000 / 30)
     let hash = 0
     const combined = secret + time.toString()
@@ -392,7 +411,6 @@ export default function AdminDashboard() {
           : "❌ Доступ запрещён - неверный код или код истёк",
     })
 
-    // Add to access log
     setAccessLogs([
       {
         id: Date.now().toString(),
@@ -432,6 +450,15 @@ export default function AdminDashboard() {
     const interval = setInterval(updateCodes, 1000)
     return () => clearInterval(interval)
   }, [users])
+
+  useEffect(() => {
+    setUsers((prevUsers) =>
+        prevUsers.map((user) => ({
+          ...user,
+          qrCode: user.qrCode || generateQRCode(user.name, user.totpSecret),
+        })),
+    )
+  }, [])
 
   return (
       <div className="min-h-screen bg-background">
@@ -476,17 +503,6 @@ export default function AdminDashboard() {
                           приложения аутентификации.
                         </AlertDescription>
                       </Alert>
-                      <div className="text-sm space-y-2">
-                        <p>
-                          <strong>Когда использовать:</strong>
-                        </p>
-                        <ul className="list-disc list-inside space-y-1 text-muted-foreground">
-                          <li>Подозрение на утечку секретных ключей</li>
-                          <li>Компрометация устройства администратора</li>
-                          <li>Обнаружение несанкционированного доступа</li>
-                          <li>Плановая ротация ключей безопасности</li>
-                        </ul>
-                      </div>
                     </div>
                     <DialogFooter>
                       <Button variant="outline" onClick={() => setIsMassResetOpen(false)}>
@@ -518,7 +534,6 @@ export default function AdminDashboard() {
         </header>
 
         <div className="px-4 py-6 max-w-7xl mx-auto space-y-6">
-          {/* Emergency Alert */}
           {emergencyMode && (
               <Alert className="border-red-200 bg-red-50">
                 <AlertTriangle className="h-4 w-4 text-red-600" />
@@ -527,10 +542,71 @@ export default function AdminDashboard() {
                   <br />• Все физические доступы заблокированы
                   <br />• Повышенное логирование всех действий
                   <br />• Уведомления службы безопасности отправлены
-                  <br />• Доступ только для супер-администраторов
                 </AlertDescription>
               </Alert>
           )}
+
+          <Dialog open={showNewUserQr} onOpenChange={() => {}}>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle className="text-center">🔐 Настройка аутентификатора</DialogTitle>
+                <DialogDescription className="text-center">
+                  Для пользователя: <strong>{newUserCreated?.name}</strong>
+                </DialogDescription>
+              </DialogHeader>
+
+              <Alert className="border-red-200 bg-red-50">
+                <AlertTriangle className="h-4 w-4 text-red-600" />
+                <AlertDescription className="text-red-800 text-sm">
+                  <strong>⚠️ ВНИМАНИЕ!</strong> QR-код показывается только ОДИН раз из соображений безопасности. Сохраните
+                  его сейчас или запишите секретный ключ.
+                </AlertDescription>
+              </Alert>
+
+              <div className="flex justify-center p-4">
+                <div className="text-center space-y-4">
+                  <img
+                      src={newUserQrCode || "/placeholder.svg"}
+                      alt="QR Code for TOTP setup"
+                      className="w-48 h-48 border rounded mx-auto"
+                  />
+                  <div className="text-sm text-muted-foreground space-y-2">
+                    <p className="font-medium">Секретный ключ:</p>
+                    <code className="bg-muted px-2 py-1 rounded text-xs break-all block">
+                      {newUserCreated?.totpSecret}
+                    </code>
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => copyToClipboard(newUserCreated?.totpSecret || "")}
+                        className="mt-2"
+                    >
+                      <Copy className="h-3 w-3 mr-1" />
+                      Скопировать ключ
+                    </Button>
+                  </div>
+                </div>
+              </div>
+
+              <Alert className="border-blue-200 bg-blue-50">
+                <AlertDescription className="text-blue-800 text-sm">
+                  <strong>Инструкция:</strong>
+                  <br />
+                  1. Откройте Google Authenticator или Authy
+                  <br />
+                  2. Отсканируйте QR-код или введите ключ вручную
+                  <br />
+                  3. Проверьте, что код генерируется корректно
+                </AlertDescription>
+              </Alert>
+
+              <DialogFooter>
+                <Button onClick={handleQrConfirmed} className="w-full">
+                  ✅ Настройка завершена
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
 
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
             <Card className="shadow-sm hover:shadow-md transition-shadow border-0 bg-gradient-to-br from-card to-card/50">
@@ -723,6 +799,9 @@ export default function AdminDashboard() {
                                 <div className="flex flex-wrap items-center gap-2 mb-2">
                                   <p className="font-semibold text-base">{user.name}</p>
                                   {getAccessLevelBadge(user.accessLevel)}
+                                  {!user.qrShown && (
+                                      <Badge className="bg-red-100 text-red-800 hover:bg-red-100">🔐 Требует настройки</Badge>
+                                  )}
                                 </div>
                                 <p className="text-sm text-muted-foreground mb-3">
                                   Истекает: {user.keyExpiry.toLocaleDateString("ru-RU")}
@@ -768,39 +847,6 @@ export default function AdminDashboard() {
                               >
                                 <RotateCcw className="h-4 w-4" />
                               </Button>
-                              <Dialog>
-                                <DialogTrigger asChild>
-                                  <Button variant="outline" size="sm" title="Показать QR-код">
-                                    <QrCode className="h-4 w-4" />
-                                  </Button>
-                                </DialogTrigger>
-                                <DialogContent>
-                                  <DialogHeader>
-                                    <DialogTitle>QR-код для {user.name}</DialogTitle>
-                                    <DialogDescription>
-                                      Отсканируйте этот код в приложении аутентификатора
-                                    </DialogDescription>
-                                  </DialogHeader>
-                                  <div className="flex justify-center p-4">
-                                    <div className="text-center space-y-4">
-                                      <img
-                                          src={user.qrCode || "/placeholder.svg"}
-                                          alt={`QR Code for ${user.name}`}
-                                          className="w-48 h-48 border rounded mx-auto"
-                                      />
-                                      <div className="text-sm text-muted-foreground space-y-1">
-                                        <p>Секретный ключ:</p>
-                                        <code className="bg-muted px-2 py-1 rounded text-xs break-all">
-                                          {user.totpSecret}
-                                        </code>
-                                        <p className="text-xs mt-2">
-                                          Используйте Google Authenticator, Authy или другое TOTP-приложение
-                                        </p>
-                                      </div>
-                                    </div>
-                                  </div>
-                                </DialogContent>
-                              </Dialog>
                               <Button
                                   variant="outline"
                                   size="sm"
@@ -819,120 +865,91 @@ export default function AdminDashboard() {
             </TabsContent>
 
             <TabsContent value="keys" className="space-y-4">
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Тест доступа</CardTitle>
-                    <CardDescription>
-                      {emergencyMode
-                          ? "⚠️ Тест недоступен в режиме тревоги"
-                          : "Введите 6-значный TOTP код из приложения аутентификатора или используйте текущие коды выше"}
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="flex gap-2">
-                      <Input
-                          placeholder="Введите 6-значный код"
-                          value={testCode}
-                          onChange={(e) => setTestCode(e.target.value)}
-                          maxLength={6}
-                          disabled={emergencyMode}
-                      />
-                      <Button onClick={testAccess} disabled={testCode.length !== 6 || emergencyMode}>
-                        <CheckCircle className="h-4 w-4 mr-2" />
-                        Тест
-                      </Button>
-                    </div>
+              <Card className="shadow-sm border-0 bg-gradient-to-br from-card to-card/50">
+                <CardHeader>
+                  <CardTitle className="text-lg">Тест доступа</CardTitle>
+                  <CardDescription>Проверьте TOTP-код для тестирования системы</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {emergencyMode ? (
+                      <Alert className="border-red-200 bg-red-50">
+                        <AlertTriangle className="h-4 w-4 text-red-600" />
+                        <AlertDescription className="text-red-800">
+                          <strong>🚨 Тест-доступ заблокирован</strong> - система находится в режиме тревоги
+                        </AlertDescription>
+                      </Alert>
+                  ) : (
+                      <>
+                        <div className="flex gap-2">
+                          <Input
+                              placeholder="Введите 6-значный код"
+                              value={testCode}
+                              onChange={(e) => setTestCode(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                              maxLength={6}
+                              className="font-mono text-center text-lg"
+                          />
+                          <Button onClick={testAccess} disabled={testCode.length !== 6}>
+                            Проверить
+                          </Button>
+                        </div>
+                        {testResult && (
+                            <Alert
+                                className={testResult.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}
+                            >
+                              <AlertDescription className={testResult.success ? "text-green-800" : "text-red-800"}>
+                                {testResult.message}
+                              </AlertDescription>
+                            </Alert>
+                        )}
+                      </>
+                  )}
+                </CardContent>
+              </Card>
 
-                    <div className="text-sm text-muted-foreground space-y-2">
-                      <div>
-                        <p>
-                          <strong>Как это работает:</strong>
-                        </p>
-                        <p>
-                          • <strong>Секретный ключ</strong> - длинная строка для настройки приложения
-                        </p>
-                        <p>
-                          • <strong>TOTP код</strong> - 6 цифр, меняется каждые 30 секунд
-                        </p>
-                        <p>• Для входа используются только 6-значные коды</p>
-                      </div>
-
-                      <div className="border-t pt-2">
-                        <p>
-                          <strong>🚨 Режим тревоги нужен для:</strong>
-                        </p>
-                        <p>• Экстренной блокировки всех доступов при взломе</p>
-                        <p>• Повышенного мониторинга и логирования</p>
-                        <p>• Ограничения функций только для супер-админов</p>
-                        <p>• Автоматических уведомлений службы безопасности</p>
-                      </div>
-
-                      <div className="border-t pt-2">
-                        <p>
-                          <strong>🔄 Массовый сброс ключей используется при:</strong>
-                        </p>
-                        <p>• Подозрении на утечку данных или взлом</p>
-                        <p>• Компрометации устройств пользователей</p>
-                        <p>• Плановой ротации ключей безопасности</p>
-                      </div>
-                    </div>
-
-                    {testResult && (
-                        <Alert className={testResult.success ? "border-green-200 bg-green-50" : "border-red-200 bg-red-50"}>
-                          <AlertDescription className={testResult.success ? "text-green-800" : "text-red-800"}>
-                            {emergencyMode && testResult.success
-                                ? "⚠️ Код верный, но доступ заблокирован режимом тревоги"
-                                : testResult.message}
-                          </AlertDescription>
-                        </Alert>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Настройки безопасности</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span>Интервал обновления кода</span>
-                      <Badge variant="outline">30 секунд</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Длина кода</span>
-                      <Badge variant="outline">6 цифр</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Алгоритм</span>
-                      <Badge variant="outline">SHA-256</Badge>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span>Статус системы</span>
-                      <Badge className={emergencyMode ? "bg-red-100 text-red-800" : "bg-green-100 text-green-800"}>
-                        {emergencyMode ? "🚨 Тревога" : "🟢 Норма"}
-                      </Badge>
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+              <Card className="shadow-sm border-0 bg-gradient-to-br from-card to-card/50">
+                <CardHeader>
+                  <CardTitle className="text-lg">Активные TOTP-ключи</CardTitle>
+                  <CardDescription>Текущие коды обновляются каждые 30 секунд</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {users.map((user) => (
+                        <div
+                            key={user.id}
+                            className="flex items-center justify-between p-3 bg-background/50 rounded-lg border"
+                        >
+                          <div>
+                            <p className="font-medium">{user.name}</p>
+                            <p className="text-sm text-muted-foreground">{getAccessLevelText(user.accessLevel)}</p>
+                          </div>
+                          <div className="text-right">
+                            <code className="text-lg font-mono font-bold bg-primary/10 px-3 py-1 rounded">
+                              {currentCodes[user.id] || "------"}
+                            </code>
+                            <p className="text-xs text-muted-foreground mt-1">{getStatusBadge(user.status)}</p>
+                          </div>
+                        </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="logs" className="space-y-4">
-              <Card>
+              <Card className="shadow-sm border-0 bg-gradient-to-br from-card to-card/50">
                 <CardHeader>
-                  <div className="flex items-center justify-between">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
                     <div>
-                      <CardTitle>История доступа</CardTitle>
-                      <CardDescription>Журнал попыток входа в систему</CardDescription>
+                      <CardTitle className="text-lg">История доступа</CardTitle>
+                      <CardDescription>Логи всех попыток входа в систему</CardDescription>
                     </div>
                     <Select value={logFilter} onValueChange={(value: any) => setLogFilter(value)}>
-                      <SelectTrigger className="w-40">
+                      <SelectTrigger className="w-full sm:w-40">
                         <Filter className="h-4 w-4 mr-2" />
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Все записи</SelectItem>
+                        <SelectItem value="all">Все попытки</SelectItem>
                         <SelectItem value="success">Успешные</SelectItem>
                         <SelectItem value="failed">Неудачные</SelectItem>
                       </SelectContent>
@@ -942,19 +959,24 @@ export default function AdminDashboard() {
                 <CardContent>
                   <div className="space-y-2">
                     {filteredLogs.map((log) => (
-                        <div key={log.id} className="flex items-center justify-between p-3 border rounded-lg">
+                        <div
+                            key={log.id}
+                            className={`flex items-center justify-between p-3 rounded-lg border ${
+                                log.success ? "bg-green-50 border-green-200" : "bg-red-50 border-red-200"
+                            }`}
+                        >
                           <div className="flex items-center gap-3">
-                            <div className={`w-3 h-3 rounded-full ${log.success ? "bg-green-500" : "bg-red-500"}`} />
+                            <div className={`w-2 h-2 rounded-full ${log.success ? "bg-green-500" : "bg-red-500"}`} />
                             <div>
                               <p className="font-medium">{log.userName}</p>
                               <p className="text-sm text-muted-foreground">{log.timestamp.toLocaleString("ru-RU")}</p>
                             </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <code className="text-sm bg-muted px-2 py-1 rounded">{log.code}</code>
-                            <Badge className={log.success ? "bg-green-100 text-green-800" : "bg-red-100 text-red-800"}>
-                              {log.success ? "Успех" : "Отказ"}
-                            </Badge>
+                          <div className="text-right">
+                            <code className="text-sm bg-background px-2 py-1 rounded">{log.code}</code>
+                            <p className={`text-xs mt-1 ${log.success ? "text-green-600" : "text-red-600"}`}>
+                              {log.success ? "✅ Успешно" : "❌ Отклонено"}
+                            </p>
                           </div>
                         </div>
                     ))}
@@ -964,19 +986,22 @@ export default function AdminDashboard() {
             </TabsContent>
 
             <TabsContent value="notifications" className="space-y-4">
-              <Card>
+              <Card className="shadow-sm border-0 bg-gradient-to-br from-card to-card/50">
                 <CardHeader>
-                  <CardTitle>Центр уведомлений</CardTitle>
-                  <CardDescription>Отслеживайте важные события и истечение ключей</CardDescription>
+                  <CardTitle className="text-lg">Системные уведомления</CardTitle>
+                  <CardDescription>Важные события и предупреждения системы</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-3">
                     {notifications.map((notification) => (
-                        <div key={notification.id} className="flex items-start gap-3 p-3 border rounded-lg">
+                        <div
+                            key={notification.id}
+                            className="flex items-start gap-3 p-4 bg-background/50 rounded-lg border"
+                        >
                           {getNotificationIcon(notification.type)}
                           <div className="flex-1">
                             <p className="text-sm">{notification.message}</p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-xs text-muted-foreground mt-1">
                               {notification.timestamp.toLocaleString("ru-RU")}
                             </p>
                           </div>
