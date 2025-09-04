@@ -15,64 +15,40 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { AlertTriangle, Users, Key, Bell, Trash2, RotateCcw, Shield, Copy, CheckCircle, Clock } from "lucide-react"
-import { Filter } from "lucide-react" // Import missing variables
+import {
+  AlertTriangle,
+  Users,
+  Key,
+  Bell,
+  Trash2,
+  RotateCcw,
+  Shield,
+  Copy,
+  CheckCircle,
+  Clock,
+  Plus,
+} from "lucide-react"
+import { Filter } from "lucide-react"
 
-const generateQRCodeDataURL = (text: string): string => {
-  // Simple QR code generation using a more realistic pattern
-  const size = 200
-  const modules = 25 // QR code modules per side
-  const moduleSize = size / modules
+const generateQRCodeDataURL = async (text: string): Promise<string> => {
+  // Import qrcode dynamically for client-side usage
+  const QRCode = (await import("qrcode")).default
 
-  // Create a more realistic QR pattern based on the input text
-  const canvas = document.createElement("canvas")
-  canvas.width = size
-  canvas.height = size
-  const ctx = canvas.getContext("2d")!
-
-  // White background
-  ctx.fillStyle = "white"
-  ctx.fillRect(0, 0, size, size)
-
-  // Black modules
-  ctx.fillStyle = "black"
-
-  // Generate pattern based on text hash
-  let hash = 0
-  for (let i = 0; i < text.length; i++) {
-    hash = ((hash << 5) - hash + text.charCodeAt(i)) & 0xffffffff
+  try {
+    const qrCodeDataURL = await QRCode.toDataURL(text, {
+      width: 200,
+      margin: 2,
+      color: {
+        dark: "#000000",
+        light: "#FFFFFF",
+      },
+    })
+    return qrCodeDataURL
+  } catch (error) {
+    console.error("Error generating QR code:", error)
+    // Fallback to a simple placeholder
+    return "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48cmVjdCB3aWR0aD0iMjAwIiBoZWlnaHQ9IjIwMCIgZmlsbD0iI2Y5ZjlmOSIvPjx0ZXh0IHg9IjUwJSIgeT0iNTAlIiBkb21pbmFudC1iYXNlbGluZT0ibWlkZGxlIiB0ZXh0LWFuY2hvcj0ibWlkZGxlIiBmb250LWZhbWlseT0ibW9ub3NwYWNlIiBmb250LXNpemU9IjE0cHgiIGZpbGw9IiM5OTk5OTkiPkVycm9yPC90ZXh0Pjwvc3ZnPg=="
   }
-
-  // Draw finder patterns (corner squares)
-  const drawFinderPattern = (x: number, y: number) => {
-    // Outer square
-    ctx.fillRect(x * moduleSize, y * moduleSize, 7 * moduleSize, 7 * moduleSize)
-    ctx.fillStyle = "white"
-    ctx.fillRect((x + 1) * moduleSize, (y + 1) * moduleSize, 5 * moduleSize, 5 * moduleSize)
-    ctx.fillStyle = "black"
-    ctx.fillRect((x + 2) * moduleSize, (y + 2) * moduleSize, 3 * moduleSize, 3 * moduleSize)
-  }
-
-  // Draw finder patterns
-  drawFinderPattern(0, 0) // Top-left
-  drawFinderPattern(18, 0) // Top-right
-  drawFinderPattern(0, 18) // Bottom-left
-
-  // Draw data modules with pseudo-random pattern
-  for (let y = 0; y < modules; y++) {
-    for (let x = 0; x < modules; x++) {
-      // Skip finder patterns and separators
-      if ((x < 9 && y < 9) || (x > 15 && y < 9) || (x < 9 && y > 15)) continue
-
-      // Generate pseudo-random module based on position and hash
-      const moduleHash = (hash + x * 7 + y * 11) % 256
-      if (moduleHash > 128) {
-        ctx.fillRect(x * moduleSize, y * moduleSize, moduleSize, moduleSize)
-      }
-    }
-  }
-
-  return canvas.toDataURL()
 }
 
 interface User {
@@ -189,12 +165,11 @@ export default function AccessControlAdmin() {
   const [visibleSecrets, setVisibleSecrets] = useState<Set<string>>(new Set())
   const [testCode, setTestCode] = useState("")
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
-  const [currentCodes, setCurrentCodes] = useState<Record<string, string>>({})
   const [testUserId, setTestUserId] = useState<string>("")
 
-  const [newUserQrCode, setNewUserQrCode] = useState<string>("") // Added state for new user QR code
-  const [showNewUserQr, setShowNewUserQr] = useState(false) // Added state to control QR display
-  const [newUserCreated, setNewUserCreated] = useState<User | null>(null) // Added state for newly created user
+  const [newUserQrCode, setNewUserQrCode] = useState<string>("")
+  const [showNewUserQr, setShowNewUserQr] = useState(false)
+  const [newUserCreated, setNewUserCreated] = useState<User | null>(null)
   const [activeTab, setActiveTab] = useState<"users" | "keys" | "logs" | "notifications">("users")
 
   const activeUsers = users.filter((u) => u.isActive).length
@@ -203,10 +178,10 @@ export default function AccessControlAdmin() {
   ).length
   const inactiveUsers = users.filter((u) => !u.isActive).length
 
-  const generateQRCode = (name: string, secret: string) => {
+  const generateQRCode = async (name: string, secret: string) => {
     const issuer = "Access Control System"
     const otpauthUrl = `otpauth://totp/${encodeURIComponent(issuer)}:${encodeURIComponent(name)}?secret=${secret}&issuer=${encodeURIComponent(issuer)}`
-    return generateQRCodeDataURL(otpauthUrl)
+    return await generateQRCodeDataURL(otpauthUrl)
   }
 
   const getAccessLevelText = (level: string) => {
@@ -294,12 +269,12 @@ export default function AccessControlAdmin() {
     ])
   }
 
-  const resetUserKey = (userId: string) => {
+  const resetUserKey = async (userId: string) => {
     const newSecret = generateTOTPSecret()
     const user = users.find((u) => u.id === userId)
 
     if (user) {
-      const qrCode = generateQRCode(user.name, newSecret)
+      const qrCode = await generateQRCode(user.name, newSecret)
 
       setUsers(
           users.map((u) =>
@@ -366,11 +341,11 @@ export default function AccessControlAdmin() {
     navigator.clipboard.writeText(text)
   }
 
-  const addUser = () => {
+  const addUser = async () => {
     if (newUserName && newUserAccessLevel) {
       const expirationDays = newUserAccessLevel === "permanent" ? 365 : newUserAccessLevel === "guest" ? 7 : 30
       const newSecret = generateTOTPSecret()
-      const qrCode = generateQRCode(newUserName, newSecret)
+      const qrCode = await generateQRCode(newUserName, newSecret)
 
       const user: User = {
         id: Date.now().toString(),
@@ -444,6 +419,54 @@ export default function AccessControlAdmin() {
                 </div>
               </div>
               <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+                <Dialog open={isAddUserOpen} onOpenChange={setShowAddUserDialog}>
+                  <DialogTrigger asChild>
+                    <Button variant="secondary" size="sm" className="flex items-center gap-2 text-xs">
+                      <Plus className="h-3 w-3" />
+                      <span className="hidden sm:inline">Добавить пользователя</span>
+                      <span className="sm:hidden">Добавить</span>
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Добавить нового пользователя</DialogTitle>
+                      <DialogDescription>Создание нового пользователя с TOTP-ключом для доступа</DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="user-name">Имя пользователя</Label>
+                        <Input
+                            id="user-name"
+                            value={newUserName}
+                            onChange={(e) => setNewUserName(e.target.value)}
+                            placeholder="Введите имя"
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="access-level">Уровень доступа</Label>
+                        <Select value={newUserAccessLevel} onValueChange={setNewUserAccessLevel}>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Выберите уровень доступа" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="permanent">🏢 Постоянный сотрудник (1 год)</SelectItem>
+                            <SelectItem value="guest">👤 Гость (7 дней)</SelectItem>
+                            <SelectItem value="business_trip">✈️ Командировка (30 дней)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setShowAddUserDialog(false)}>
+                          Отмена
+                        </Button>
+                        <Button onClick={addUser} className="bg-orange-600 hover:bg-orange-700">
+                          Создать пользователя
+                        </Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+
                 <Dialog open={isMassResetOpen} onOpenChange={setShowMassResetDialog}>
                   <DialogTrigger asChild>
                     <Button variant="destructive" size="sm" className="flex items-center gap-2 text-xs">
@@ -461,22 +484,24 @@ export default function AccessControlAdmin() {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4">
-                      {/* <Alert className="border-red-200 bg-red-50">
-                      <AlertTriangle className="h-4 w-4 text-red-600" />
-                      <AlertDescription className="text-red-800">
-                        <strong>Внимание!</strong> После сброса всем пользователям потребуется заново настроить
-                        приложения аутентификации.
-                      </AlertDescription>
-                    </Alert> */}
+                      <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+                        <div className="flex items-center gap-2 text-red-700">
+                          <AlertTriangle className="h-4 w-4" />
+                          <span className="font-medium">Внимание!</span>
+                        </div>
+                        <p className="text-red-800 text-sm mt-1">
+                          После сброса всем пользователям потребуется заново настроить приложения аутентификации.
+                        </p>
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button variant="outline" onClick={() => setShowMassResetDialog(false)}>
+                          Отмена
+                        </Button>
+                        <Button variant="destructive" onClick={resetAllKeys}>
+                          Сбросить все ключи ({users.length} шт.)
+                        </Button>
+                      </div>
                     </div>
-                    {/* <DialogFooter>
-                    <Button variant="outline" onClick={() => setShowMassResetDialog(false)}>
-                      Отмена
-                    </Button>
-                    <Button variant="destructive" onClick={resetAllKeys}>
-                      Сбросить все ключи ({users.length} шт.)
-                    </Button>
-                  </DialogFooter> */}
                   </DialogContent>
                 </Dialog>
 
