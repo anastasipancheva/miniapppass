@@ -1,26 +1,28 @@
-import type { Metadata } from 'next'
-import { GeistSans } from 'geist/font/sans'
-import { GeistMono } from 'geist/font/mono'
-import { Analytics } from '@vercel/analytics/next'
-import './globals.css'
+import type React from "react"
+import type { Metadata } from "next"
+import { GeistSans } from "geist/font/sans"
+import { GeistMono } from "geist/font/mono"
+import { Analytics } from "@vercel/analytics/next"
+import { Suspense } from "react"
+import "./globals.css"
 
 export const metadata: Metadata = {
-  title: 'InfoAccessBot - система защищенного контроля',
-  description: 'Кундурпур',
-  generator: 'Кейс от ИНФОТЕКС',
+  title: "InfoAccessBot - система защищенного контроля",
+  description: "Кундурпур",
+  generator: "Кейс от ИНФОТЕКС",
 }
 
 export default function RootLayout({
-  children,
-}: Readonly<{
+                                     children,
+                                   }: Readonly<{
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+      <html lang="en">
       <body className={`font-sans ${GeistSans.variable} ${GeistMono.variable}`}>
-        {children}
-        <Analytics />
+      <Suspense fallback={null}>{children}</Suspense>
+      <Analytics />
       </body>
-    </html>
+      </html>
   )
 }

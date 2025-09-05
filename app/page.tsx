@@ -321,16 +321,54 @@ export default function AccessControlAdmin() {
         isActive: true,
       }
 
-      setUsers([...users, user])
-      setNotifications([
-        {
-          id: Date.now().toString(),
-          type: "success",
-          message: `✅ Пользователь ${newUserName} добавлен с уровнем доступа "${getAccessLevelText(newUserAccessLevel as any)}"`,
-          timestamp: new Date(),
-        },
-        ...notifications,
-      ])
+      try {
+        const response = await fetch("https://iag9aq-5-77-6-147.ru.tuna.am/api/users", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            name: newUserName,
+            accessLevel: newUserAccessLevel,
+            expiresAt: user.expiresAt.toISOString(),
+            totpSecret: newSecret,
+            isActive: true,
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const controllerResult = await response.json()
+        console.log("[v0] User created in controller:", controllerResult)
+
+        // Update local state only if controller creation was successful
+        setUsers([...users, user])
+        setNotifications([
+          {
+            id: Date.now().toString(),
+            type: "success",
+            message: `✅ Пользователь ${newUserName} добавлен локально и в контроллере с уровнем доступа "${getAccessLevelText(newUserAccessLevel as any)}"`,
+            timestamp: new Date(),
+          },
+          ...notifications,
+        ])
+      } catch (error) {
+        console.error("[v0] Error creating user in controller:", error)
+
+        // Still add user locally but show warning
+        setUsers([...users, user])
+        setNotifications([
+          {
+            id: Date.now().toString(),
+            type: "warning",
+            message: `⚠️ Пользователь ${newUserName} добавлен локально, но не удалось синхронизировать с контроллером. Проверьте подключение.`,
+            timestamp: new Date(),
+          },
+          ...notifications,
+        ])
+      }
 
       setNewUserCreated(user)
       setNewUserQrCode(qrCode)
