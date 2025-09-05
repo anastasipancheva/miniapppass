@@ -94,7 +94,7 @@ export default function AccessControlAdmin() {
   const [users, setUsers] = useState<User[]>([
     {
       id: "1",
-      name: "Мария Сидорова",
+      name: "Мария Иванова",
       accessLevel: "permanent",
       expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
       totpSecret: "",
